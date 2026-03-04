@@ -3,19 +3,19 @@ Playlist editor for Verse Surf game built on Vue SPA and node.
 
 Use this app to create and edit custom playlists for the Verse Surf music lyrics party game.
 
-## Home Page 
+### Home Page 
 - presentation of editor
 - ability to create a new playlist
 - ability to import a playlist from json
 - ability to import a public playlist from spotify URL
 
-## Playlist page 
+### Playlist page 
 - list existing songs and perform CRUD operations on songs
 - ability to import track from spotify URL
 - ability to choose playlist cover image from one of the songs
 - ability to export playlist as json
 
-## Song page
+### Song page
 - ability to edit snippet
 - ability to choose start and end seconds for song, while automatically setting 5 seconds between them by defaults
 - ability to simulate the round as in the Verse Surf game:
@@ -44,8 +44,13 @@ Use this app to create and edit custom playlists for the Verse Surf music lyrics
       - low score if snippet answer is contained in the title of the song
       - low score if snippet answer is shorter than 4 letters
 
-  Future plans:
-  ## Song page
+## Design
+The color scheme is #DEAF9F #C77F6A #8E4942 #E5D5D3 and #D9957C.
+![Logo](./versesurf-editor/src/assets/logo.png)
+
+
+  ## Future plans:
+  ### Song page
   - integrate with hugging face for whisper song preview
   - integrate with hugging face for snippet suggestions
   - Steam login and playlist saving server-side (firebase/supabase) with direct integration into the game itself (Community Playlists)
