@@ -194,7 +194,6 @@ function goBack() {
                     type="number"
                     step="0.01"
                     min="0"
-                    @change="autoSetEnd"
                   />
                   <span class="timing-unit">s</span>
                 </div>

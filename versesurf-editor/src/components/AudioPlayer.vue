@@ -14,14 +14,14 @@ const emit = defineEmits<{
 const audio = ref<HTMLAudioElement | null>(null)
 const isPlaying = ref(false)
 const currentTime = ref(0)
-const volume = ref(1)
+const volume = ref(0.7)
 let animationFrame: number | null = null
 let fadeInterval: ReturnType<typeof setInterval> | null = null
 
 function playSegment() {
   if (!audio.value || !props.src) return
-  audio.value.volume = 1
-  volume.value = 1
+  audio.value.volume = 0.7
+  volume.value = 0.7
   audio.value.currentTime = props.startSecond
   audio.value.play()
   isPlaying.value = true
@@ -38,7 +38,6 @@ function resume() {
   if (!audio.value) return
   audio.value.play()
   isPlaying.value = true
-  trackTime()
 }
 
 function fadeOut() {
