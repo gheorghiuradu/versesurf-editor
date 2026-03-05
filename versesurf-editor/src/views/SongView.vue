@@ -32,6 +32,8 @@ const roundPhase = ref<RoundPhase>('idle')
 const qualityWarnings = computed(() => {
   const warnings: string[] = []
   const answer = getAnswerText(editSnippet.value)
+  const startSecond = editStartSecond.value
+  const endSecond = editEndSecond.value
   if (answer && song.value) {
     if (song.value.Title.toLowerCase().includes(answer.toLowerCase())) {
       warnings.push('Answer is contained in the song title — too easy to guess!')
@@ -39,6 +41,9 @@ const qualityWarnings = computed(() => {
     if (answer.length < 4) {
       warnings.push('Answer is shorter than 4 characters — might be too short')
     }
+  }
+  if (endSecond - startSecond < 5) {
+    warnings.push('End second is less than 5 seconds from start — might be too short')
   }
   return warnings
 })
@@ -49,10 +54,7 @@ function getAnswerText(snippet: string): string {
 }
 
 function getSongAlbumArt(s: Song): string {
-  if (s.SpotifyId) {
-    return `https://i.scdn.co/image/ab67616d0000b273${s.SpotifyId}`
-  }
-  return genericAlbum
+  return s.PictureUrl ?? genericAlbum
 }
 
 onMounted(() => {
@@ -167,6 +169,7 @@ function goBack() {
             <div class="form-group">
               <label>Preview URL</label>
               <input v-model="editPreviewUrl" placeholder="Audio preview URL" />
+              <audio v-if="editPreviewUrl" :src="editPreviewUrl" controls class="w-full" />
             </div>
 
             <div class="form-group">
@@ -176,7 +179,7 @@ function goBack() {
               </label>
               <input
                 v-model="editSnippet"
-                placeholder='e.g. Never gonna give you {up}'
+                placeholder='e.g. Never gonna {give} you up'
                 class="snippet-input"
               />
             </div>
@@ -573,4 +576,9 @@ function goBack() {
     flex-direction: column;
   }
 }
+
+.w-full {
+  width: 100%;
+}
+
 </style>

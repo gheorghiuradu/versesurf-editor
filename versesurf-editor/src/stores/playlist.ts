@@ -99,7 +99,7 @@ export const usePlaylistStore = defineStore('playlist', () => {
         const song = playlist.value.Songs.find((s) => s.Id === songId)
         if (song) {
             // Use Spotify CDN album art URL derived from SpotifyId if available
-            playlist.value.PictureUrl = `https://i.scdn.co/image/ab67616d00001e02${song.SpotifyId}`
+            playlist.value.PictureUrl = `song.PictureUrl`
             showToast('Cover updated!', 'success')
         }
     }

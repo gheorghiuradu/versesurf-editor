@@ -8,6 +8,7 @@ export interface Song {
   EndSecond: number
   IsExplicit: boolean
   PreviewUrl: string
+  PictureUrl: string
   Enabled: boolean
 }
 

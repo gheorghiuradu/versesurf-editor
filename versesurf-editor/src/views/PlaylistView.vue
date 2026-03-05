@@ -75,7 +75,7 @@ function exportPlaylist() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${playlist.value?.Name ?? 'playlist'}.json`
+  a.download = `${playlist.value?.Id.substring(0, 13)}_${playlist.value?.Name.replace(/\s/g, '_')}.json`
   a.click()
   URL.revokeObjectURL(url)
   store.showToast('Playlist exported!', 'success')
@@ -96,9 +96,9 @@ function getSnippetPreview(snippet: string): string {
   return snippet.replace(/\{([^}]+)\}/g, '____')
 }
 
-function getSongAlbumArt(song: { SpotifyId: string }): string {
-  if (song.SpotifyId) {
-    return `https://i.scdn.co/image/ab67616d0000b273${song.SpotifyId}`
+function getSongAlbumArt(song: { PictureUrl: string }): string {
+  if (song.PictureUrl) {
+    return song.PictureUrl
   }
   return genericAlbum
 }
@@ -234,7 +234,7 @@ function getSongAlbumArt(song: { SpotifyId: string }): string {
           </div>
           <div class="form-group">
             <label>Snippet</label>
-            <input v-model="newSnippet" placeholder='e.g. Never gonna give you {up}' />
+            <input v-model="newSnippet" placeholder='e.g. Never gonna {give} you up' />
           </div>
           <div class="modal-actions">
             <button class="btn btn-ghost" @click="showAddSong = false">Cancel</button>
