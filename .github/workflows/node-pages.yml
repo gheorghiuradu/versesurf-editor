@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - "versesurf-editor/**"    
+      - ".github/workflows/node-pages.yml"
   workflow_dispatch:
     
 jobs:
@@ -24,25 +25,20 @@ jobs:
         node-version: ${{ matrix.node-version }}
 
     - name: Build
+      working-directory: versesurf-editor
       run: |
         npm install
         npm run build
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload build output
-          path: 'versesurf-editor/dist'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v5
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        # Upload build output
+        path: 'versesurf-editor/dist'
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
