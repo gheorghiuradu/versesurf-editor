@@ -9,6 +9,7 @@ import type { Song } from '@/types'
 
 import { fetchSpotifyTrack } from '@/utils/spotify'
 import { loadWhisperModel, transcribeAudio, isModelLoaded, WHISPER_LANGUAGES, type WordTimestamp, type TranscriptionResult } from '@/utils/whisper'
+import { fetchLrclibLyrics, parseLrc, type LrcLine, type LrclibResult } from '@/utils/lrclib'
 
 const route = useRoute()
 
@@ -66,6 +67,16 @@ const modelLoadProgress = ref('')
 const transcriptionResult = ref<TranscriptionResult | null>(null)
 const whisperModelReady = ref(isModelLoaded())
 const selectedLanguage = ref('en')
+
+// Lyrics panel tab
+type LyricsTab = 'transcription' | 'synced'
+const lyricsTab = ref<LyricsTab>('transcription')
+
+// LRCLIB synced lyrics
+const isFetchingLyrics = ref(false)
+const lrclibResult = ref<LrclibResult | null>(null)
+const lrclibLines = ref<LrcLine[]>([])
+const lrclibError = ref('')
 
 // Round simulator state
 type RoundPhase = 'idle' | 'listening' | 'snippet' | 'revealed'
@@ -230,6 +241,36 @@ function formatTimestamp(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = (seconds % 60).toFixed(1)
   return `${m}:${s.padStart(4, '0')}`
+}
+
+async function fetchSyncedLyrics() {
+  if (!editArtist.value || !editTitle.value) {
+    store.showToast('Artist and title are required to fetch lyrics', 'error')
+    return
+  }
+  isFetchingLyrics.value = true
+  lrclibError.value = ''
+  lrclibResult.value = null
+  lrclibLines.value = []
+  try {
+    const result = await fetchLrclibLyrics(editArtist.value, editTitle.value)
+    lrclibResult.value = result
+    if (result.syncedLyrics) {
+      lrclibLines.value = parseLrc(result.syncedLyrics)
+    }
+    store.showToast('Lyrics fetched!', 'success')
+  } catch (error) {
+    lrclibError.value = error instanceof Error ? error.message : 'Failed to fetch lyrics'
+    store.showToast(lrclibError.value, 'error')
+  } finally {
+    isFetchingLyrics.value = false
+  }
+}
+
+function useLrcLine(line: LrcLine) {
+  editSnippet.value = line.text
+  editEndSecond.value = Math.round((line.time - 0.2) * 100) / 100
+  editStartSecond.value = Math.max(0, Math.round((line.time - 6) * 100) / 100)
 }
 </script>
 
@@ -401,46 +442,109 @@ function formatTimestamp(seconds: number): string {
 
           <!-- Lyrics Transcription -->
           <div class="panel">
-            <h3 class="section-title">🎤 Lyrics Transcription (Whisper)</h3>
-            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: var(--space-md)">
-              Transcribe the audio preview to get word-level timestamps
-            </p>
-
-            <div class="transcription-actions">
-              <button v-if="!whisperModelReady" class="btn btn-secondary btn-sm" @click="loadModel"
-                :disabled="isModelLoading">
-                {{ isModelLoading ? '⏳ Loading model...' : '📦 Load Whisper Model' }}
+            <!-- Tab header -->
+            <div class="lyrics-tabs">
+              <button class="lyrics-tab" :class="{ active: lyricsTab === 'transcription' }"
+                @click="lyricsTab = 'transcription'">
+                🎤 Transcription
               </button>
-              <span v-if="whisperModelReady" class="model-ready-badge">✅ Model Ready</span>
-              <select v-model="selectedLanguage" class="language-select">
-                <option v-for="lang in WHISPER_LANGUAGES" :key="lang.code" :value="lang.code">
-                  {{ lang.label }}
-                </option>
-              </select>
-              <button class="btn btn-primary btn-sm" @click="runTranscription"
-                :disabled="isTranscribing || !editPreviewUrl">
-                {{ isTranscribing ? '⏳ Transcribing...' : '🎙️ Transcribe' }}
+              <button class="lyrics-tab" :class="{ active: lyricsTab === 'synced' }" @click="lyricsTab = 'synced'">
+                🎵 Synced Lyrics
               </button>
             </div>
 
-            <p v-if="modelLoadProgress" class="model-progress">{{ modelLoadProgress }}</p>
-
-            <!-- Transcription Results -->
-            <div v-if="transcriptionResult" class="transcription-results">
-              <div class="transcription-full-text">
-                <strong>Full text:</strong> {{ transcriptionResult.text }}
-              </div>
-              <div class="word-timestamps">
-                <div v-for="(word, i) in transcriptionResult.words" :key="i" class="word-chip"
-                  @click="useWordAsSnippet(word)"
-                  :title="`Click to use as snippet (${formatTimestamp(word.start)} - ${formatTimestamp(word.end)})`">
-                  <span class="word-text">{{ word.word }}</span>
-                  <span class="word-time">{{ formatTimestamp(word.start) }}</span>
-                </div>
-              </div>
-              <p class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-sm)">
-                Click a word to use it as snippet answer and auto-set timing
+            <!-- Tab: Whisper Transcription -->
+            <div v-show="lyricsTab === 'transcription'">
+              <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: var(--space-md)">
+                Transcribe the audio preview to get word-level timestamps
               </p>
+
+              <div class="transcription-actions">
+                <button v-if="!whisperModelReady" class="btn btn-secondary btn-sm" @click="loadModel"
+                  :disabled="isModelLoading">
+                  {{ isModelLoading ? '⏳ Loading model...' : '📦 Load Whisper Model' }}
+                </button>
+                <span v-if="whisperModelReady" class="model-ready-badge">✅ Model Ready</span>
+                <select v-model="selectedLanguage" class="language-select">
+                  <option v-for="lang in WHISPER_LANGUAGES" :key="lang.code" :value="lang.code">
+                    {{ lang.label }}
+                  </option>
+                </select>
+                <button class="btn btn-primary btn-sm" @click="runTranscription"
+                  :disabled="isTranscribing || !editPreviewUrl">
+                  {{ isTranscribing ? '⏳ Transcribing...' : '🎙️ Transcribe' }}
+                </button>
+              </div>
+
+              <p v-if="modelLoadProgress" class="model-progress">{{ modelLoadProgress }}</p>
+
+              <!-- Transcription Results -->
+              <div v-if="transcriptionResult" class="transcription-results">
+                <div class="transcription-full-text">
+                  <strong>Full text:</strong> {{ transcriptionResult.text }}
+                </div>
+                <div class="word-timestamps">
+                  <div v-for="(word, i) in transcriptionResult.words" :key="i" class="word-chip"
+                    @click="useWordAsSnippet(word)"
+                    :title="`Click to use as snippet (${formatTimestamp(word.start)} - ${formatTimestamp(word.end)})`">
+                    <span class="word-text">{{ word.word }}</span>
+                    <span class="word-time">{{ formatTimestamp(word.start) }}</span>
+                  </div>
+                </div>
+                <p class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-sm)">
+                  Click a word to use it as snippet answer and auto-set timing
+                </p>
+              </div>
+            </div>
+
+            <!-- Tab: Synced Lyrics (LRCLIB) -->
+            <div v-show="lyricsTab === 'synced'">
+              <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: var(--space-md)">
+                Fetch full synced lyrics from LRCLIB
+              </p>
+
+              <div class="transcription-actions">
+                <button class="btn btn-primary btn-sm" @click="fetchSyncedLyrics"
+                  :disabled="isFetchingLyrics || !editArtist || !editTitle">
+                  {{ isFetchingLyrics ? '⏳ Fetching...' : '🔍 Fetch Lyrics' }}
+                </button>
+                <span v-if="lrclibResult && !lrclibResult.instrumental" class="model-ready-badge">
+                  ✅ {{ lrclibLines.length }} lines
+                </span>
+                <span v-if="lrclibResult?.instrumental" class="model-ready-badge"
+                  style="color: var(--color-text-muted)">
+                  🎸 Instrumental
+                </span>
+              </div>
+
+              <p v-if="lrclibError" class="model-progress" style="color: var(--color-error, #f44)">
+                {{ lrclibError }}
+              </p>
+
+              <!-- Synced Lyrics Results -->
+              <div v-if="lrclibLines.length" class="transcription-results">
+                <div class="lrc-lines">
+                  <div v-for="(line, i) in lrclibLines" :key="i" class="lrc-line" @click="useLrcLine(line)"
+                    :title="`Click to use as snippet (${formatTimestamp(line.time)})`">
+                    <span class="word-time lrc-line-time">{{ formatTimestamp(line.time) }}</span>
+                    <span class="lrc-line-text">{{ line.text }}</span>
+                  </div>
+                </div>
+                <p class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-sm)">
+                  Click a line to set it as the snippet and auto-set timing
+                </p>
+              </div>
+
+              <!-- Plain lyrics fallback when no synced -->
+              <div v-else-if="lrclibResult && !lrclibResult.instrumental && lrclibResult.plainLyrics"
+                class="transcription-results">
+                <div class="transcription-full-text" style="white-space: pre-line">
+                  {{ lrclibResult.plainLyrics }}
+                </div>
+                <p class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-sm)">
+                  No synced timestamps available — plain lyrics shown
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -466,11 +570,6 @@ function formatTimestamp(seconds: number): string {
   grid-template-columns: 1fr 1fr;
   gap: var(--space-xl);
   margin-top: var(--space-md);
-}
-
-/* ── Editor Panel ────────────────────────────── */
-.editor-panel {
-  /* left side */
 }
 
 .song-identity {
@@ -581,6 +680,72 @@ function formatTimestamp(seconds: number): string {
   width: 18px;
   height: 18px;
   accent-color: var(--color-terracotta);
+}
+
+/* ── Lyrics Tabs ─────────────────────────────── */
+.lyrics-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-md);
+}
+
+.lyrics-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color var(--transition-base), border-color var(--transition-base);
+}
+
+.lyrics-tab:hover {
+  color: var(--color-text);
+}
+
+.lyrics-tab.active {
+  color: var(--color-terracotta);
+  border-bottom-color: var(--color-terracotta);
+}
+
+/* ── Synced Lyrics ───────────────────────────── */
+.lrc-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.lrc-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-base);
+  user-select: none;
+}
+
+.lrc-line:hover {
+  background: rgba(199, 127, 106, 0.1);
+}
+
+.lrc-line-time {
+  flex-shrink: 0;
+  min-width: 3.2rem;
+  text-align: right;
+}
+
+.lrc-line-text {
+  font-size: 0.875rem;
+  color: var(--color-text);
 }
 
 /* ── Transcription ───────────────────────────── */
