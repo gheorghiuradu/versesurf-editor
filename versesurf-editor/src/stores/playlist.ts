@@ -52,7 +52,7 @@ export const usePlaylistStore = defineStore('playlist', () => {
     function addSong(song?: Partial<Song>): Song {
         const newSong: Song = {
             Id: generateId(),
-            SpotifyId: '',
+            SpotifyId: song?.SpotifyId ?? '',
             Title: song?.Title ?? 'New Song',
             Artist: song?.Artist ?? '',
             Snippet: song?.Snippet ?? '',
@@ -60,6 +60,7 @@ export const usePlaylistStore = defineStore('playlist', () => {
             EndSecond: song?.EndSecond ?? 5,
             IsExplicit: song?.IsExplicit ?? false,
             PreviewUrl: song?.PreviewUrl ?? '',
+            PictureUrl: song?.PictureUrl ?? '',
             Enabled: song?.Enabled ?? true,
         }
         if (playlist.value) {
@@ -137,12 +138,83 @@ export const usePlaylistStore = defineStore('playlist', () => {
         }
     }
 
-    function importSpotifyPlaylistUrl(_url: string) {
-        showToast('Spotify import coming soon!', 'warning')
+    async function importSpotifyPlaylistUrl(url: string) {
+        if (!url) return
+        try {
+            const playlistData = await import('@/utils/spotify').then(m => m.fetchSpotifyPlaylist(url))
+
+            if (!playlist.value) {
+                createPlaylist(playlistData.name)
+                // Overwrite the toast immediately since we're about to show one for imported
+                toastVisible.value = false
+            } else {
+                // If playlist name is default, update it
+                if (!playlist.value.Name || playlist.value.Name.startsWith('My Playlist')) {
+                    playlist.value.Name = playlistData.name
+                }
+            }
+            if (playlist.value) {
+                if (!playlist.value.PictureUrl) {
+                    playlist.value.PictureUrl = playlistData.coverUrl
+                }
+            }
+
+            let addedCount = 0
+            for (const track of playlistData.tracks) {
+                // Skip if no title or artist is found
+                if (!track.title && !track.artist) continue
+
+                addSong({
+                    Title: track.title,
+                    Artist: track.artist,
+                    PreviewUrl: track.previewUrl,
+                    PictureUrl: track.coverUrl,
+                    SpotifyId: track.spotifyId
+                })
+                addedCount++
+            }
+
+            // Trigger reactivity explicitly since we modified a deep array in bulk
+            if (playlist.value && addedCount > 0) {
+                playlist.value.Songs = [...playlist.value.Songs]
+            }
+
+            showToast(`Imported ${addedCount} tracks from "${playlistData.name}"`, 'success')
+            return true
+        } catch (error) {
+            console.error('Spotify playlist import error:', error)
+            showToast(error instanceof Error ? error.message : 'Error importing playlist', 'error')
+            return false
+        }
     }
 
-    function importSpotifyTrackUrl(_url: string) {
-        showToast('Spotify track import coming soon!', 'warning')
+    async function importSpotifyTrackUrl(url: string) {
+        if (!url) return
+        try {
+            const trackData = await import('@/utils/spotify').then(m => m.fetchSpotifyTrack(url))
+            if (!playlist.value) {
+                createPlaylist(trackData.title + ' Mix')
+                toastVisible.value = false
+            }
+            if (playlist.value) {
+                if (!playlist.value.PictureUrl) {
+                    playlist.value.PictureUrl = trackData.coverUrl
+                }
+            }
+            const song = addSong({
+                Title: trackData.title,
+                Artist: trackData.artist,
+                PreviewUrl: trackData.previewUrl,
+                PictureUrl: trackData.coverUrl,
+                SpotifyId: trackData.spotifyId,
+            })
+            showToast(`Imported ${song.Title}`, 'success')
+            return true
+        } catch (error) {
+            console.error('Spotify import error:', error)
+            showToast(error instanceof Error ? error.message : 'Error importing track', 'error')
+            return false
+        }
     }
 
     return {

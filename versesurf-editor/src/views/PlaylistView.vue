@@ -9,6 +9,7 @@ const store = usePlaylistStore()
 
 // Redirect if no playlist loaded
 onMounted(() => {
+  console.log("PlaylistView onMounted, hasPlaylist:", store.hasPlaylist, "playlist.value:", store.playlist);
   if (!store.hasPlaylist) {
     router.replace('/')
   }
@@ -20,6 +21,7 @@ const showAddSong = ref(false)
 const showCoverPicker = ref(false)
 const showSpotifyImport = ref(false)
 const spotifyTrackUrl = ref('')
+const isImporting = ref(false)
 
 // New song form
 const newTitle = ref('')
@@ -86,10 +88,27 @@ function selectCover(songId: string) {
   showCoverPicker.value = false
 }
 
-function handleSpotifyImport() {
-  store.importSpotifyTrackUrl(spotifyTrackUrl.value)
-  spotifyTrackUrl.value = ''
-  showSpotifyImport.value = false
+async function handleSpotifyImport() {
+  const url = spotifyTrackUrl.value.trim()
+  if (!url) return
+  
+  isImporting.value = true
+  let success = false
+
+  if (url.includes('/playlist/')) {
+    success = (await store.importSpotifyPlaylistUrl(url)) === true
+  } else if (url.includes('/track/')) {
+    success = (await store.importSpotifyTrackUrl(url)) === true
+  } else {
+    store.showToast('Invalid Spotify URL. Must be a track or playlist.', 'error')
+  }
+
+  isImporting.value = false
+  
+  if (success) {
+    spotifyTrackUrl.value = ''
+    showSpotifyImport.value = false
+  }
 }
 
 function getSnippetPreview(snippet: string): string {
@@ -261,7 +280,9 @@ function getSongAlbumArt(song: { PictureUrl: string }): string {
           </div>
           <div class="modal-actions">
             <button class="btn btn-ghost" @click="showSpotifyImport = false">Cancel</button>
-            <button class="btn btn-primary" @click="handleSpotifyImport">Import</button>
+            <button class="btn btn-primary" @click="handleSpotifyImport" :disabled="isImporting">
+              {{ isImporting ? '⏳ Importing...' : 'Import' }}
+            </button>
           </div>
         </div>
       </div>

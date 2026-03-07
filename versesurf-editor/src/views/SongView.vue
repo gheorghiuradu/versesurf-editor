@@ -7,7 +7,36 @@ import AudioPlayer from '@/components/AudioPlayer.vue'
 import genericAlbum from '@/assets/generic-album.png'
 import type { Song } from '@/types'
 
+import { fetchSpotifyTrack } from '@/utils/spotify'
+import { loadWhisperModel, transcribeAudio, isModelLoaded, WHISPER_LANGUAGES, type WordTimestamp, type TranscriptionResult } from '@/utils/whisper'
+
 const route = useRoute()
+
+// ... (skipping to importFromSpotify function)
+async function importFromSpotify() {
+  const url = spotifyInputUrl.value.trim()
+  if (!url) return
+
+  isImporting.value = true
+
+  try {
+    const trackData = await fetchSpotifyTrack(url)
+
+    editTitle.value = trackData.title
+    editArtist.value = trackData.artist
+    editPreviewUrl.value = trackData.previewUrl
+    if (trackData.coverUrl) editPictureUrl.value = trackData.coverUrl
+    editSpotifyId.value = trackData.spotifyId
+
+    store.showToast('Track imported successfully!', 'success')
+    spotifyInputUrl.value = ''
+  } catch (error) {
+    console.error('Spotify import error:', error)
+    store.showToast(error instanceof Error ? error.message : 'Error importing track', 'error')
+  } finally {
+    isImporting.value = false
+  }
+}
 const router = useRouter()
 const store = usePlaylistStore()
 
@@ -23,6 +52,20 @@ const editPreviewUrl = ref('')
 const editStartSecond = ref(0)
 const editEndSecond = ref(5)
 const editIsExplicit = ref(false)
+const editPictureUrl = ref('')
+const editSpotifyId = ref('')
+
+// Import fields
+const spotifyInputUrl = ref('')
+const isImporting = ref(false)
+
+// Whisper transcription state
+const isModelLoading = ref(false)
+const isTranscribing = ref(false)
+const modelLoadProgress = ref('')
+const transcriptionResult = ref<TranscriptionResult | null>(null)
+const whisperModelReady = ref(isModelLoaded())
+const selectedLanguage = ref('en')
 
 // Round simulator state
 type RoundPhase = 'idle' | 'listening' | 'snippet' | 'revealed'
@@ -76,6 +119,8 @@ function loadSongData() {
   editStartSecond.value = song.value.StartSecond
   editEndSecond.value = song.value.EndSecond
   editIsExplicit.value = song.value.IsExplicit
+  editPictureUrl.value = song.value.PictureUrl || ''
+  editSpotifyId.value = song.value.SpotifyId || ''
 }
 
 function saveSong() {
@@ -88,6 +133,8 @@ function saveSong() {
     StartSecond: editStartSecond.value,
     EndSecond: editEndSecond.value,
     IsExplicit: editIsExplicit.value,
+    PictureUrl: editPictureUrl.value.trim(),
+    SpotifyId: editSpotifyId.value.trim(),
   })
   store.showToast('Song saved!', 'success')
 }
@@ -126,6 +173,64 @@ function goBack() {
   saveSong()
   router.push('/playlist')
 }
+
+// Whisper transcription
+async function loadModel() {
+  if (whisperModelReady.value) return
+  isModelLoading.value = true
+  modelLoadProgress.value = 'Initializing...'
+  try {
+    await loadWhisperModel((info) => {
+      if (info.progress != null) {
+        modelLoadProgress.value = `${info.status}: ${Math.round(info.progress)}%`
+      } else {
+        modelLoadProgress.value = info.status
+      }
+    })
+    whisperModelReady.value = true
+    store.showToast('Whisper model loaded!', 'success')
+  } catch (error) {
+    console.error('Failed to load Whisper model:', error)
+    store.showToast('Failed to load Whisper model', 'error')
+  } finally {
+    isModelLoading.value = false
+    modelLoadProgress.value = ''
+  }
+}
+
+async function runTranscription() {
+  if (!editPreviewUrl.value) {
+    store.showToast('No preview URL to transcribe', 'error')
+    return
+  }
+  if (!whisperModelReady.value) {
+    await loadModel()
+    if (!whisperModelReady.value) return
+  }
+  isTranscribing.value = true
+  try {
+    transcriptionResult.value = await transcribeAudio(editPreviewUrl.value, selectedLanguage.value)
+    store.showToast('Transcription complete!', 'success')
+  } catch (error) {
+    console.error('Transcription error:', error)
+    store.showToast('Transcription failed', 'error')
+  } finally {
+    isTranscribing.value = false
+  }
+}
+
+function useWordAsSnippet(word: WordTimestamp) {
+  editSnippet.value = editSnippet.value.replace(/\{[^}]*\}/, `{${word.word}}`)
+  editStartSecond.value = Math.round((word.start - 6) * 100) / 100
+  if (editStartSecond.value < 0) editStartSecond.value = 0
+  editEndSecond.value = Math.round((word.start - 0.2) * 100) / 100
+}
+
+function formatTimestamp(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = (seconds % 60).toFixed(1)
+  return `${m}:${s.padStart(4, '0')}`
+}
 </script>
 
 <template>
@@ -146,7 +251,7 @@ function goBack() {
         <div class="editor-panel">
           <!-- Song identity -->
           <div class="song-identity">
-            <img :src="getSongAlbumArt(song)" :alt="song.Title" class="song-album-art" />
+            <img :src="editPictureUrl || getSongAlbumArt(song)" :alt="editTitle || song.Title" class="song-album-art" />
             <div>
               <h2 class="song-title-display">{{ editTitle || 'Untitled' }}</h2>
               <p class="text-secondary">{{ editArtist || 'Unknown Artist' }}</p>
@@ -155,6 +260,16 @@ function goBack() {
 
           <!-- Edit Form -->
           <div class="edit-form">
+            <div class="form-group import-group">
+              <label>Import from Spotify (Optional)</label>
+              <div class="import-row">
+                <input v-model="spotifyInputUrl" placeholder="https://open.spotify.com/track/..." />
+                <button class="btn btn-secondary btn-sm" @click="importFromSpotify" :disabled="isImporting">
+                  {{ isImporting ? '⏳ Importing...' : '📥 Import' }}
+                </button>
+              </div>
+            </div>
+
             <div class="form-row">
               <div class="form-group">
                 <label>Title</label>
@@ -169,7 +284,7 @@ function goBack() {
             <div class="form-group">
               <label>Preview URL</label>
               <input v-model="editPreviewUrl" placeholder="Audio preview URL" />
-              <audio v-if="editPreviewUrl" :src="editPreviewUrl" controls class="w-full" />
+              <audio id="full-audio-player" v-if="editPreviewUrl" :src="editPreviewUrl" controls class="w-full" />
             </div>
 
             <div class="form-group">
@@ -177,11 +292,7 @@ function goBack() {
                 Snippet
                 <span class="label-hint">Use {curly braces} around the answer word(s)</span>
               </label>
-              <input
-                v-model="editSnippet"
-                placeholder='e.g. Never gonna {give} you up'
-                class="snippet-input"
-              />
+              <input v-model="editSnippet" placeholder='e.g. Never gonna {give} you up' class="snippet-input" />
             </div>
 
             <!-- Timing -->
@@ -189,24 +300,14 @@ function goBack() {
               <div class="form-group">
                 <label>Start Second</label>
                 <div class="timing-input">
-                  <input
-                    v-model.number="editStartSecond"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                  />
+                  <input v-model.number="editStartSecond" type="number" step="0.01" min="0" />
                   <span class="timing-unit">s</span>
                 </div>
               </div>
               <div class="form-group">
                 <label>End Second</label>
                 <div class="timing-input">
-                  <input
-                    v-model.number="editEndSecond"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                  />
+                  <input v-model.number="editEndSecond" type="number" step="0.01" min="0" />
                   <span class="timing-unit">s</span>
                 </div>
               </div>
@@ -233,75 +334,114 @@ function goBack() {
           </div>
         </div>
 
-        <!-- Right: Round Simulator -->
-        <div class="simulator-panel">
-          <h3 class="simulator-title">🎮 Round Simulator</h3>
-          <p class="text-secondary simulator-desc">
-            Preview how this song will play in the game
-          </p>
+        <!-- Second column -->
+        <div>
+          <!-- Right: Round Simulator -->
+          <div class="simulator-panel panel">
+            <h3 class="simulator-title">🎮 Round Simulator</h3>
+            <p class="text-secondary simulator-desc">
+              Preview how this song will play in the game
+            </p>
 
-          <!-- Audio Player (hidden) -->
-          <AudioPlayer
-            ref="audioPlayer"
-            :src="editPreviewUrl"
-            :start-second="editStartSecond"
-            :end-second="editEndSecond"
-            @segment-end="onSegmentEnd"
-          />
+            <!-- Audio Player (hidden) -->
+            <AudioPlayer ref="audioPlayer" :src="editPreviewUrl" :start-second="editStartSecond"
+              :end-second="editEndSecond" @segment-end="onSegmentEnd" />
 
-          <!-- Simulator Display -->
-          <div class="sim-stage">
-            <!-- Phase: Idle -->
-            <div v-if="roundPhase === 'idle'" class="sim-idle">
-              <div class="sim-vinyl">🎵</div>
-              <p class="text-muted">Press play to simulate a round</p>
-              <button
-                class="btn btn-primary btn-lg"
-                @click="startRound"
-                :disabled="!editSnippet || !editPreviewUrl"
-              >
-                ▶ Start Round
-              </button>
-              <p v-if="!editPreviewUrl" class="text-muted" style="font-size: 0.8rem; margin-top: 8px;">
-                Add a preview URL to test audio
-              </p>
-            </div>
-
-            <!-- Phase: Listening -->
-            <div v-if="roundPhase === 'listening'" class="sim-listening">
-              <div class="listening-pulse">🎧</div>
-              <p class="listening-text">Listen to this...</p>
-            </div>
-
-            <!-- Phase: Snippet shown -->
-            <div v-if="roundPhase === 'snippet'" class="sim-snippet">
-              <SnippetDisplay :snippet="editSnippet" :revealed="false" />
-              <div class="sim-snippet-actions">
-                <button class="btn btn-primary" @click="nextPhase">
-                  Reveal Answer →
+            <!-- Simulator Display -->
+            <div class="sim-stage">
+              <!-- Phase: Idle -->
+              <div v-if="roundPhase === 'idle'" class="sim-idle">
+                <div class="sim-vinyl">🎵</div>
+                <p class="text-muted">Press play to simulate a round</p>
+                <button class="btn btn-primary btn-lg" @click="startRound" :disabled="!editSnippet || !editPreviewUrl">
+                  ▶ Start Round
                 </button>
-                <button class="btn btn-ghost" @click="reEdit">
-                  ✏️ Re-edit
+                <p v-if="!editPreviewUrl" class="text-muted" style="font-size: 0.8rem; margin-top: 8px;">
+                  Add a preview URL to test audio
+                </p>
+              </div>
+
+              <!-- Phase: Listening -->
+              <div v-if="roundPhase === 'listening'" class="sim-listening">
+                <div class="listening-pulse">🎧</div>
+                <p class="listening-text">Listen to this...</p>
+              </div>
+
+              <!-- Phase: Snippet shown -->
+              <div v-if="roundPhase === 'snippet'" class="sim-snippet">
+                <SnippetDisplay :snippet="editSnippet" :revealed="false" />
+                <div class="sim-snippet-actions">
+                  <button class="btn btn-primary" @click="nextPhase">
+                    Reveal Answer →
+                  </button>
+                  <button class="btn btn-ghost" @click="reEdit">
+                    ✏️ Re-edit
+                  </button>
+                </div>
+              </div>
+
+              <!-- Phase: Revealed -->
+              <div v-if="roundPhase === 'revealed'" class="sim-revealed">
+                <SnippetDisplay :snippet="editSnippet" :revealed="true" />
+                <p class="fade-hint text-muted">🔉 Music fading out...</p>
+                <button class="btn btn-ghost" @click="resetRound" style="margin-top: var(--space-lg)">
+                  ↻ Reset
                 </button>
               </div>
             </div>
 
-            <!-- Phase: Revealed -->
-            <div v-if="roundPhase === 'revealed'" class="sim-revealed">
-              <SnippetDisplay :snippet="editSnippet" :revealed="true" />
-              <p class="fade-hint text-muted">🔉 Music fading out...</p>
-              <button class="btn btn-ghost" @click="resetRound" style="margin-top: var(--space-lg)">
-                ↻ Reset
-              </button>
+            <!-- Phase indicator -->
+            <div class="phase-dots">
+              <span class="dot" :class="{ active: roundPhase === 'idle' }"></span>
+              <span class="dot" :class="{ active: roundPhase === 'listening' }"></span>
+              <span class="dot" :class="{ active: roundPhase === 'snippet' }"></span>
+              <span class="dot" :class="{ active: roundPhase === 'revealed' }"></span>
             </div>
           </div>
 
-          <!-- Phase indicator -->
-          <div class="phase-dots">
-            <span class="dot" :class="{ active: roundPhase === 'idle' }"></span>
-            <span class="dot" :class="{ active: roundPhase === 'listening' }"></span>
-            <span class="dot" :class="{ active: roundPhase === 'snippet' }"></span>
-            <span class="dot" :class="{ active: roundPhase === 'revealed' }"></span>
+          <!-- Lyrics Transcription -->
+          <div class="panel">
+            <h3 class="section-title">🎤 Lyrics Transcription (Whisper)</h3>
+            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: var(--space-md)">
+              Transcribe the audio preview to get word-level timestamps
+            </p>
+
+            <div class="transcription-actions">
+              <button v-if="!whisperModelReady" class="btn btn-secondary btn-sm" @click="loadModel"
+                :disabled="isModelLoading">
+                {{ isModelLoading ? '⏳ Loading model...' : '📦 Load Whisper Model' }}
+              </button>
+              <span v-if="whisperModelReady" class="model-ready-badge">✅ Model Ready</span>
+              <select v-model="selectedLanguage" class="language-select">
+                <option v-for="lang in WHISPER_LANGUAGES" :key="lang.code" :value="lang.code">
+                  {{ lang.label }}
+                </option>
+              </select>
+              <button class="btn btn-primary btn-sm" @click="runTranscription"
+                :disabled="isTranscribing || !editPreviewUrl">
+                {{ isTranscribing ? '⏳ Transcribing...' : '🎙️ Transcribe' }}
+              </button>
+            </div>
+
+            <p v-if="modelLoadProgress" class="model-progress">{{ modelLoadProgress }}</p>
+
+            <!-- Transcription Results -->
+            <div v-if="transcriptionResult" class="transcription-results">
+              <div class="transcription-full-text">
+                <strong>Full text:</strong> {{ transcriptionResult.text }}
+              </div>
+              <div class="word-timestamps">
+                <div v-for="(word, i) in transcriptionResult.words" :key="i" class="word-chip"
+                  @click="useWordAsSnippet(word)"
+                  :title="`Click to use as snippet (${formatTimestamp(word.start)} - ${formatTimestamp(word.end)})`">
+                  <span class="word-text">{{ word.word }}</span>
+                  <span class="word-time">{{ formatTimestamp(word.start) }}</span>
+                </div>
+              </div>
+              <p class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-sm)">
+                Click a word to use it as snippet answer and auto-set timing
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -356,6 +496,19 @@ function goBack() {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.import-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.import-row input {
+  flex: 1;
+}
+
+.import-row button {
+  min-width: 120px;
 }
 
 .form-row {
@@ -430,6 +583,91 @@ function goBack() {
   accent-color: var(--color-terracotta);
 }
 
+/* ── Transcription ───────────────────────────── */
+.section-title {
+  font-size: 1rem;
+  margin-bottom: var(--space-xs);
+}
+
+.transcription-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.model-ready-badge {
+  font-size: 0.8rem;
+  color: var(--color-success, #4caf50);
+  font-weight: 600;
+}
+
+.language-select {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  width: 9em;
+}
+
+.model-progress {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+
+.transcription-results {
+  margin-top: var(--space-md);
+}
+
+.transcription-full-text {
+  font-size: 0.9rem;
+  padding: var(--space-sm);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-md);
+  line-height: 1.6;
+}
+
+.word-timestamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.word-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  user-select: none;
+}
+
+.word-chip:hover {
+  border-color: var(--color-terracotta);
+  background: rgba(199, 127, 106, 0.1);
+  transform: translateY(-1px);
+}
+
+.word-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.word-time {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono), monospace;
+}
+
 /* ── Quality ─────────────────────────────────── */
 .quality-section {
   margin-top: var(--space-lg);
@@ -451,15 +689,21 @@ function goBack() {
   padding: var(--space-xs) 0;
 }
 
-/* ── Simulator Panel ─────────────────────────── */
-.simulator-panel {
+.panel {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
-  position: sticky;
+  /* position: sticky; */
+  height: fit-content;
+  margin-top: var(--space-md);
+}
+
+/* ── Simulator Panel ─────────────────────────── */
+.simulator-panel {
   top: 80px;
 }
+
 
 .simulator-title {
   font-size: 1.1rem;
@@ -568,9 +812,11 @@ function goBack() {
   .song-layout {
     grid-template-columns: 1fr;
   }
+
   .simulator-panel {
     position: static;
   }
+
   .form-row {
     flex-direction: column;
   }
@@ -579,5 +825,4 @@ function goBack() {
 .w-full {
   width: 100%;
 }
-
 </style>

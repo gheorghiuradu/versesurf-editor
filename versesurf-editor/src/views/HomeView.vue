@@ -11,9 +11,9 @@ const store = usePlaylistStore()
 
 const showCreateForm = ref(false)
 const playlistName = ref('')
-const showImportForm = ref(false)
 const showSpotifyForm = ref(false)
 const spotifyUrl = ref('')
+const isImporting = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 function createPlaylist() {
@@ -40,8 +40,28 @@ function handleFileImport(event: Event) {
   reader.readAsText(file)
 }
 
-function handleSpotifyImport() {
-  store.importSpotifyPlaylistUrl(spotifyUrl.value)
+async function handleSpotifyImport() {
+  const url = spotifyUrl.value.trim()
+  if (!url) return
+  
+  isImporting.value = true
+  let success = false
+  
+  if (url.includes('/playlist/')) {
+    success = (await store.importSpotifyPlaylistUrl(url)) === true
+  } else if (url.includes('/track/')) {
+    success = (await store.importSpotifyTrackUrl(url)) === true
+  } else {
+    store.showToast('Invalid Spotify URL. Must be a track or playlist.', 'error')
+  }
+
+  isImporting.value = false
+
+  if (success) {
+    spotifyUrl.value = ''
+    showSpotifyForm.value = false
+    router.push('/playlist')
+  }
 }
 </script>
 
@@ -135,8 +155,8 @@ function handleSpotifyImport() {
           </div>
           <div class="modal-actions">
             <button class="btn btn-ghost" @click="showSpotifyForm = false">Cancel</button>
-            <button class="btn btn-primary" @click="handleSpotifyImport">
-              Import
+            <button class="btn btn-primary" @click="handleSpotifyImport" :disabled="isImporting">
+              {{ isImporting ? '⏳ Importing...' : 'Import' }}
             </button>
           </div>
         </div>
