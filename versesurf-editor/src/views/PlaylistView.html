@@ -1,0 +1,192 @@
+  <div class="playlist-view" v-if="playlist">
+    <!-- Playlist Header -->
+    <header class="playlist-header">
+      <div class="container">
+        <div class="header-inner">
+          <!-- Cover -->
+          <div class="cover-wrapper" @click="showCoverPicker = true">
+            <img
+              :src="playlist.PictureUrl || genericAlbum"
+              alt="Playlist cover"
+              class="cover-image"
+            />
+            <div class="cover-overlay">
+              <span>Change Cover</span>
+            </div>
+          </div>
+
+          <div class="header-info">
+            <!-- Playlist Name -->
+            <div class="name-row">
+              <template v-if="!editingName">
+                <h1 class="playlist-name" @click="startEditName">{{ playlist.Name }}</h1>
+                <button class="btn btn-icon btn-ghost" @click="startEditName" title="Edit name">✏️</button>
+              </template>
+              <template v-else>
+                <input
+                  v-model="editName"
+                  class="name-input"
+                  @keyup.enter="saveName"
+                  @blur="saveName"
+                  autofocus
+                />
+              </template>
+            </div>
+
+            <p class="text-secondary">
+              {{ store.songCount }} {{ store.songCount === 1 ? 'song' : 'songs' }}
+            </p>
+
+            <div class="header-actions">
+              <button class="btn btn-primary btn-sm" @click="showAddSong = true">
+                ＋ Add Song
+              </button>
+              <button class="btn btn-secondary btn-sm" @click="showSpotifyImport = true">
+                🎧 Spotify Import
+              </button>
+              <button class="btn btn-secondary btn-sm" @click="exportPlaylist">
+                📦 Export JSON
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Song List -->
+    <section class="songs-section container">
+      <div v-if="playlist.Songs.length === 0" class="empty-state">
+        <div class="empty-icon">🎶</div>
+        <h3>No songs yet</h3>
+        <p class="text-secondary">Add your first song to get started</p>
+        <button class="btn btn-primary" @click="showAddSong = true">＋ Add Song</button>
+      </div>
+
+      <TransitionGroup name="list" tag="div" class="song-list" v-else>
+        <div
+          v-for="(song, index) in playlist.Songs"
+          :key="song.Id"
+          class="song-card card"
+          :class="{ 'song-disabled': !song.Enabled }"
+          :style="{ animationDelay: `${index * 50}ms` }"
+        >
+          <div class="song-art" @click="editSong(song.Id)">
+            <img :src="getSongAlbumArt(song)" :alt="song.Title" />
+          </div>
+
+          <div class="song-info" @click="editSong(song.Id)">
+            <h3 class="song-title">{{ song.Title }}</h3>
+            <p class="song-artist text-secondary">{{ song.Artist }}</p>
+            <p class="song-snippet text-muted" v-if="song.Snippet">
+              {{ getSnippetPreview(song.Snippet) }}
+            </p>
+          </div>
+
+          <div class="song-meta">
+            <span class="song-timing badge badge-success" v-if="song.StartSecond || song.EndSecond">
+              {{ song.StartSecond.toFixed(1) }}s – {{ song.EndSecond.toFixed(1) }}s
+            </span>
+            <span class="badge badge-warning" v-if="song.IsExplicit">E</span>
+          </div>
+
+          <div class="song-actions">
+            <button
+              class="btn btn-icon btn-ghost"
+              @click="toggleSong(song.Id)"
+              :title="song.Enabled ? 'Disable' : 'Enable'"
+            >
+              {{ song.Enabled ? '👁️' : '🚫' }}
+            </button>
+            <button class="btn btn-icon btn-ghost" @click="editSong(song.Id)" title="Edit">
+              ✏️
+            </button>
+            <button class="btn btn-icon btn-ghost" @click="deleteSong(song.Id)" title="Delete">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </TransitionGroup>
+    </section>
+
+    <!-- Add Song Modal -->
+    <Transition name="modal">
+      <div v-if="showAddSong" class="modal-overlay" @click.self="showAddSong = false">
+        <div class="modal">
+          <h3>Add New Song</h3>
+          <div class="form-group">
+            <label>Title</label>
+            <input v-model="newTitle" placeholder="Song title" @keyup.enter="addSong" autofocus />
+          </div>
+          <div class="form-group">
+            <label>Artist</label>
+            <input v-model="newArtist" placeholder="Artist name" />
+          </div>
+          <div class="form-group">
+            <label>Preview URL</label>
+            <input v-model="newPreviewUrl" placeholder="Audio preview URL" />
+          </div>
+          <div class="form-group">
+            <label>Snippet</label>
+            <input v-model="newSnippet" placeholder='e.g. Never gonna {give} you up' />
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" @click="showAddSong = false">Cancel</button>
+            <button class="btn btn-primary" @click="addSong" :disabled="!newTitle.trim()">
+              Add & Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Spotify Import Modal -->
+    <Transition name="modal">
+      <div v-if="showSpotifyImport" class="modal-overlay" @click.self="showSpotifyImport = false">
+        <div class="modal">
+          <h3>Import from Spotify</h3>
+          <div class="form-group">
+            <label>Spotify Track URL</label>
+            <input
+              v-model="spotifyTrackUrl"
+              placeholder="https://open.spotify.com/track/..."
+              @keyup.enter="handleSpotifyImport"
+            />
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" @click="showSpotifyImport = false">Cancel</button>
+            <button class="btn btn-primary" @click="handleSpotifyImport" :disabled="isImporting">
+              {{ isImporting ? '⏳ Importing...' : 'Import' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Cover Picker Modal -->
+    <Transition name="modal">
+      <div v-if="showCoverPicker" class="modal-overlay" @click.self="showCoverPicker = false">
+        <div class="modal modal-wide">
+          <h3>Choose Playlist Cover</h3>
+          <p class="text-secondary" style="margin-bottom: var(--space-lg)">
+            Select a song's album art as the playlist cover
+          </p>
+          <div class="cover-grid" v-if="playlist.Songs.length">
+            <div
+              v-for="song in playlist.Songs"
+              :key="song.Id"
+              class="cover-option"
+              :class="{ 'cover-active': playlist.PictureUrl && playlist.PictureUrl.includes(song.SpotifyId) }"
+              @click="selectCover(song.Id)"
+            >
+              <img :src="getSongAlbumArt(song)" :alt="song.Title" />
+              <span class="cover-label">{{ song.Title }}</span>
+            </div>
+          </div>
+          <p v-else class="text-muted">Add songs first to choose a cover</p>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" @click="showCoverPicker = false">Close</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </div>

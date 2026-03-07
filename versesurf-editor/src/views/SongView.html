@@ -1,0 +1,355 @@
+<div class="song-view" v-if="song">
+  <div class="container">
+    <!-- Top bar -->
+    <div class="top-bar">
+      <button class="btn btn-ghost" @click="goBack">← Back to Playlist</button>
+      <div style="display: flex; gap: var(--space-sm)">
+        <button class="btn btn-secondary btn-sm" @click="showSpotifyModal = true">
+          📥 Spotify
+        </button>
+        <button class="btn btn-primary btn-sm" @click="saveSong">💾 Save</button>
+      </div>
+    </div>
+
+    <div class="song-layout">
+      <!-- Left: Song Info & Editor -->
+      <div class="editor-panel">
+        <!-- Song identity -->
+        <div class="song-identity">
+          <img
+            :src="editPictureUrl || getSongAlbumArt(song)"
+            :alt="editTitle || song.Title"
+            class="song-album-art"
+          />
+          <div>
+            <h2 class="song-title-display">{{ editTitle || 'Untitled' }}</h2>
+            <p class="text-secondary">{{ editArtist || 'Unknown Artist' }}</p>
+          </div>
+        </div>
+
+        <!-- Edit Form -->
+        <div class="edit-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Title</label>
+              <input v-model="editTitle" placeholder="Song title" />
+            </div>
+            <div class="form-group">
+              <label>Artist</label>
+              <input v-model="editArtist" placeholder="Artist name" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Preview URL</label>
+            <input v-model="editPreviewUrl" placeholder="Audio preview URL" />
+            <audio
+              id="full-audio-player"
+              v-if="editPreviewUrl"
+              :src="editPreviewUrl"
+              controls
+              class="w-full"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>
+              Snippet
+              <span class="label-hint">Use {curly braces} around the answer word(s)</span>
+            </label>
+            <input
+              v-model="editSnippet"
+              placeholder="e.g. Never gonna {give} you up"
+              class="snippet-input"
+            />
+          </div>
+
+          <!-- Timing -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Start Second</label>
+              <div class="timing-input">
+                <input v-model.number="editStartSecond" type="number" step="0.01" min="0" />
+                <span class="timing-unit">s</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>End Second</label>
+              <div class="timing-input">
+                <input v-model.number="editEndSecond" type="number" step="0.01" min="0" />
+                <span class="timing-unit">s</span>
+              </div>
+            </div>
+            <div class="form-group timing-auto">
+              <button
+                class="btn btn-ghost btn-sm"
+                @click="autoSetEnd"
+                title="Set end to start + 5s"
+              >
+                ↻ Auto 5s
+              </button>
+            </div>
+          </div>
+
+          <!-- Explicit toggle -->
+          <label class="toggle-row">
+            <input type="checkbox" v-model="editIsExplicit" />
+            <span>Explicit content</span>
+          </label>
+        </div>
+
+        <!-- Quality Warnings -->
+        <div v-if="qualityWarnings.length" class="quality-section">
+          <h3 class="quality-title">⚠️ Quality Warnings</h3>
+          <div v-for="(warning, i) in qualityWarnings" :key="i" class="quality-warning">
+            {{ warning }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Second column -->
+      <div>
+        <!-- Right: Round Simulator -->
+        <div class="simulator-panel panel">
+          <h3 class="simulator-title">🎮 Round Simulator</h3>
+          <p class="text-secondary simulator-desc">Preview how this song will play in the game</p>
+
+          <!-- Audio Player (hidden) -->
+          <AudioPlayer
+            ref="audioPlayer"
+            :src="editPreviewUrl"
+            :start-second="editStartSecond"
+            :end-second="editEndSecond"
+            @segment-end="onSegmentEnd"
+          />
+
+          <!-- Simulator Display -->
+          <div class="sim-stage">
+            <!-- Phase: Idle -->
+            <div v-if="roundPhase === 'idle'" class="sim-idle">
+              <div class="sim-vinyl">🎵</div>
+              <p class="text-muted">Press play to simulate a round</p>
+              <button
+                class="btn btn-primary btn-lg"
+                @click="startRound"
+                :disabled="!editSnippet || !editPreviewUrl"
+              >
+                ▶ Start Round
+              </button>
+              <p
+                v-if="!editPreviewUrl"
+                class="text-muted"
+                style="font-size: 0.8rem; margin-top: 8px"
+              >
+                Add a preview URL to test audio
+              </p>
+            </div>
+
+            <!-- Phase: Listening -->
+            <div v-if="roundPhase === 'listening'" class="sim-listening">
+              <div class="listening-pulse">🎧</div>
+              <p class="listening-text">Listen to this...</p>
+            </div>
+
+            <!-- Phase: Snippet shown -->
+            <div v-if="roundPhase === 'snippet'" class="sim-snippet">
+              <SnippetDisplay :snippet="editSnippet" :revealed="false" />
+              <div class="sim-snippet-actions">
+                <button class="btn btn-primary" @click="nextPhase">Reveal Answer →</button>
+                <button class="btn btn-ghost" @click="reEdit">✏️ Re-edit</button>
+              </div>
+            </div>
+
+            <!-- Phase: Revealed -->
+            <div v-if="roundPhase === 'revealed'" class="sim-revealed">
+              <SnippetDisplay :snippet="editSnippet" :revealed="true" />
+              <p class="fade-hint text-muted">🔉 Music fading out...</p>
+              <button class="btn btn-ghost" @click="resetRound" style="margin-top: var(--space-lg)">
+                ↻ Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- Phase indicator -->
+          <div class="phase-dots">
+            <span class="dot" :class="{ active: roundPhase === 'idle' }"></span>
+            <span class="dot" :class="{ active: roundPhase === 'listening' }"></span>
+            <span class="dot" :class="{ active: roundPhase === 'snippet' }"></span>
+            <span class="dot" :class="{ active: roundPhase === 'revealed' }"></span>
+          </div>
+        </div>
+
+        <!-- Lyrics Transcription -->
+        <div class="panel">
+          <!-- Tab header -->
+          <div class="lyrics-tabs">
+            <button
+              class="lyrics-tab"
+              :class="{ active: lyricsTab === 'transcription' }"
+              @click="lyricsTab = 'transcription'"
+            >
+              🎤 Transcription
+            </button>
+            <button
+              class="lyrics-tab"
+              :class="{ active: lyricsTab === 'synced' }"
+              @click="lyricsTab = 'synced'"
+            >
+              🎵 Synced Lyrics
+            </button>
+          </div>
+
+          <!-- Tab: Whisper Transcription -->
+          <div v-show="lyricsTab === 'transcription'">
+            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: var(--space-md)">
+              Transcribe the audio preview to get word-level timestamps
+            </p>
+
+            <div class="transcription-actions">
+              <button
+                v-if="!whisperModelReady"
+                class="btn btn-secondary btn-sm"
+                @click="loadModel"
+                :disabled="isModelLoading"
+              >
+                {{ isModelLoading ? '⏳ Loading model...' : '📦 Load Whisper Model' }}
+              </button>
+              <span v-if="whisperModelReady" class="model-ready-badge">✅ Model Ready</span>
+              <select v-model="selectedLanguage" class="language-select">
+                <option v-for="lang in WHISPER_LANGUAGES" :key="lang.code" :value="lang.code">
+                  {{ lang.label }}
+                </option>
+              </select>
+              <button
+                class="btn btn-primary btn-sm"
+                @click="runTranscription"
+                :disabled="isTranscribing || !editPreviewUrl"
+              >
+                {{ isTranscribing ? '⏳ Transcribing...' : '🎙️ Transcribe' }}
+              </button>
+            </div>
+
+            <p v-if="modelLoadProgress" class="model-progress">{{ modelLoadProgress }}</p>
+
+            <!-- Transcription Results -->
+            <div v-if="transcriptionResult" class="transcription-results">
+              <div class="transcription-full-text">
+                <strong>Full text:</strong> {{ transcriptionResult.text }}
+              </div>
+              <div class="word-timestamps">
+                <div
+                  v-for="(word, i) in transcriptionResult.words"
+                  :key="i"
+                  class="word-chip"
+                  @click="useWordAsSnippet(word)"
+                  :title="`Click to use as snippet (${formatTimestamp(word.start)} - ${formatTimestamp(word.end)})`"
+                >
+                  <span class="word-text">{{ word.word }}</span>
+                  <span class="word-time">{{ formatTimestamp(word.start) }}</span>
+                </div>
+              </div>
+              <p class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-sm)">
+                Click a word to use it as snippet answer and auto-set timing
+              </p>
+            </div>
+          </div>
+
+          <!-- Tab: Synced Lyrics (LRCLIB) -->
+          <div v-show="lyricsTab === 'synced'">
+            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: var(--space-md)">
+              Fetch full synced lyrics from LRCLIB
+            </p>
+
+            <div class="transcription-actions">
+              <button
+                class="btn btn-primary btn-sm"
+                @click="fetchSyncedLyrics"
+                :disabled="isFetchingLyrics || !editArtist || !editTitle"
+              >
+                {{ isFetchingLyrics ? '⏳ Fetching...' : '🔍 Fetch Lyrics' }}
+              </button>
+              <span v-if="lrclibResult && !lrclibResult.instrumental" class="model-ready-badge">
+                ✅ {{ lrclibLines.length }} lines
+              </span>
+              <span
+                v-if="lrclibResult?.instrumental"
+                class="model-ready-badge"
+                style="color: var(--color-text-muted)"
+              >
+                🎸 Instrumental
+              </span>
+            </div>
+
+            <p v-if="lrclibError" class="model-progress" style="color: var(--color-error, #f44)">
+              {{ lrclibError }}
+            </p>
+
+            <!-- Synced Lyrics Results -->
+            <div v-if="lrclibLines.length" class="transcription-results">
+              <div class="lrc-lines">
+                <div
+                  v-for="(line, i) in lrclibLines"
+                  :key="i"
+                  class="lrc-line"
+                  @click="useLrcLine(line)"
+                  :title="`Click to use as snippet (${formatTimestamp(line.time)})`"
+                >
+                  <span class="word-time lrc-line-time">{{ formatTimestamp(line.time) }}</span>
+                  <span class="lrc-line-text">{{ line.text }}</span>
+                </div>
+              </div>
+              <p class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-sm)">
+                Click a line to set it as the snippet and auto-set timing
+              </p>
+            </div>
+
+            <!-- Plain lyrics fallback when no synced -->
+            <div
+              v-else-if="lrclibResult && !lrclibResult.instrumental && lrclibResult.plainLyrics"
+              class="transcription-results"
+            >
+              <div class="transcription-full-text" style="white-space: pre-line">
+                {{ lrclibResult.plainLyrics }}
+              </div>
+              <p class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-sm)">
+                No synced timestamps available — plain lyrics shown
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spotify Import Modal -->
+  <div v-if="showSpotifyModal" class="modal-overlay" @click.self="showSpotifyModal = false">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Import from Spotify</h3>
+        <button class="modal-close" @click="showSpotifyModal = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: var(--space-md)">
+          Paste a Spotify track URL to auto-fill the song details.
+        </p>
+        <div class="form-group">
+          <label>Spotify Track URL</label>
+          <div class="import-row">
+            <input
+              v-model="spotifyInputUrl"
+              placeholder="https://open.spotify.com/track/..."
+              @keyup.enter="importFromSpotify"
+            />
+            <button
+              class="btn btn-primary btn-sm"
+              @click="importFromSpotify"
+              :disabled="isImporting || !spotifyInputUrl.trim()"
+            >
+              {{ isImporting ? '⏳ Importing...' : '📥 Import' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
