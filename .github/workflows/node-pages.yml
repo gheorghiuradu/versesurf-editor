@@ -46,7 +46,7 @@ jobs:
       uses: actions/upload-pages-artifact@v3
       with:
         # Upload build output
-        path: 'versesurf-editor/dist/*'
+        path: 'versesurf-editor/dist/'
         
     - name: Deploy to GitHub Pages
       id: deployment
