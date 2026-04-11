@@ -1,0 +1,106 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+}
+
+.login-card {
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3xl) var(--space-xl);
+    box-shadow: var(--shadow-lg);
+}
+
+.login-logo {
+    width: 120px;
+    margin: 0 auto var(--space-lg);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+.login-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    margin-bottom: var(--space-sm);
+    background: linear-gradient(135deg, var(--color-sand), var(--color-terracotta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.login-subtitle {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xl);
+    font-size: 0.95rem;
+}
+
+.login-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+
+.btn-social {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition:
+        background var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.btn-social:hover {
+    transform: translateY(-1px);
+}
+
+.btn-social:active {
+    transform: translateY(0);
+}
+
+.social-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.btn-spotify {
+    background: #1db954;
+    color: #fff;
+    border-color: #1db954;
+}
+
+.btn-spotify:hover {
+    background: #1ed760;
+    border-color: #1ed760;
+}
+
+.btn-discord {
+    background: #5865f2;
+    color: #fff;
+    border-color: #5865f2;
+}
+
+.btn-discord:hover {
+    background: #6c78f4;
+    border-color: #6c78f4;
+}
+
+.login-footer {
+    font-size: 0.8rem;
+    line-height: 1.5;
+}

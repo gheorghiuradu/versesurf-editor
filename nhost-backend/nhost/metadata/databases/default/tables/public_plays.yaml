@@ -1,0 +1,17 @@
+table:
+  name: plays
+  schema: public
+object_relationships:
+  - name: playlist
+    using:
+      foreign_key_constraint_on: playlist_id
+  - name: user
+    using:
+      foreign_key_constraint_on: played_by
+select_permissions:
+  - role: public
+    permission:
+      columns:
+        - playlist_id
+        - played_at
+      filter: {}

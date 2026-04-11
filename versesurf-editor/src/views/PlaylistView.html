@@ -1,15 +1,15 @@
-  <div class="playlist-view" v-if="playlist">
+<div class="playlist-view-root">
+  <div v-if="isLoadingPlaylist" class="loading-state container">
+    <p class="text-secondary">Loading playlist…</p>
+  </div>
+  <div class="playlist-view" v-if="!isLoadingPlaylist && playlist">
     <!-- Playlist Header -->
     <header class="playlist-header">
       <div class="container">
         <div class="header-inner">
           <!-- Cover -->
           <div class="cover-wrapper" @click="showCoverPicker = true">
-            <img
-              :src="playlist.PictureUrl || genericAlbum"
-              alt="Playlist cover"
-              class="cover-image"
-            />
+            <img :src="playlist.PictureUrl || genericAlbum" alt="Playlist cover" class="cover-image" />
             <div class="cover-overlay">
               <span>Change Cover</span>
             </div>
@@ -20,16 +20,12 @@
             <div class="name-row">
               <template v-if="!editingName">
                 <h1 class="playlist-name" @click="startEditName">{{ playlist.Name }}</h1>
-                <button class="btn btn-icon btn-ghost" @click="startEditName" title="Edit name">✏️</button>
+                <button class="btn btn-icon btn-ghost" @click="startEditName" title="Edit name">
+                  ✏️
+                </button>
               </template>
               <template v-else>
-                <input
-                  v-model="editName"
-                  class="name-input"
-                  @keyup.enter="saveName"
-                  @blur="saveName"
-                  autofocus
-                />
+                <input v-model="editName" class="name-input" @keyup.enter="saveName" @blur="saveName" autofocus />
               </template>
             </div>
 
@@ -38,15 +34,15 @@
             </p>
 
             <div class="header-actions">
-              <button class="btn btn-primary btn-sm" @click="showAddSong = true">
-                ＋ Add Song
+              <!-- <button class="btn btn-primary btn-sm" @click="showAddSong = true">＋ Add Song</button> -->
+              <button class="btn btn-primary btn-sm" @click="showSpotifyImport = true">
+                <SpotifyIcon class="social-icon" />
+                Import Song
               </button>
-              <button class="btn btn-secondary btn-sm" @click="showSpotifyImport = true">
-                🎧 Spotify Import
+              <button class="btn btn-accent btn-sm" @click="publishPlaylist()" :disabled="store.isSaving">
+                {{ store.isSaving ? '⏳ Saving...' : '💾 Save' }}
               </button>
-              <button class="btn btn-secondary btn-sm" @click="exportPlaylist">
-                📦 Export JSON
-              </button>
+              <!-- <button class="btn btn-secondary btn-sm" @click="exportPlaylist">📦 Export JSON</button> -->
             </div>
           </div>
         </div>
@@ -59,17 +55,16 @@
         <div class="empty-icon">🎶</div>
         <h3>No songs yet</h3>
         <p class="text-secondary">Add your first song to get started</p>
-        <button class="btn btn-primary" @click="showAddSong = true">＋ Add Song</button>
+        <!-- <button class="btn btn-primary" @click="showAddSong = true">＋ Add Song</button> -->
+        <button class="btn btn-primary btn-sm" @click="showSpotifyImport = true">
+          <SpotifyIcon class="social-icon" />
+          Import Song
+        </button>
       </div>
 
       <TransitionGroup name="list" tag="div" class="song-list" v-else>
-        <div
-          v-for="(song, index) in playlist.Songs"
-          :key="song.Id"
-          class="song-card card"
-          :class="{ 'song-disabled': !song.Enabled }"
-          :style="{ animationDelay: `${index * 50}ms` }"
-        >
+        <div v-for="(song, index) in playlist.Songs" :key="song.Id" class="song-card card"
+          :class="{ 'song-disabled': !song.Enabled }" :style="{ animationDelay: `${index * 50}ms` }">
           <div class="song-art" @click="editSong(song.Id)">
             <img :src="getSongAlbumArt(song)" :alt="song.Title" />
           </div>
@@ -90,16 +85,11 @@
           </div>
 
           <div class="song-actions">
-            <button
-              class="btn btn-icon btn-ghost"
-              @click="toggleSong(song.Id)"
-              :title="song.Enabled ? 'Disable' : 'Enable'"
-            >
+            <button class="btn btn-icon btn-ghost" @click="toggleSong(song.Id)"
+              :title="song.Enabled ? 'Disable' : 'Enable'">
               {{ song.Enabled ? '👁️' : '🚫' }}
             </button>
-            <button class="btn btn-icon btn-ghost" @click="editSong(song.Id)" title="Edit">
-              ✏️
-            </button>
+            <button class="btn btn-icon btn-ghost" @click="editSong(song.Id)" title="Edit">✏️</button>
             <button class="btn btn-icon btn-ghost" @click="deleteSong(song.Id)" title="Delete">
               🗑️
             </button>
@@ -127,7 +117,7 @@
           </div>
           <div class="form-group">
             <label>Snippet</label>
-            <input v-model="newSnippet" placeholder='e.g. Never gonna {give} you up' />
+            <input v-model="newSnippet" placeholder="e.g. Never gonna {give} you up" />
           </div>
           <div class="modal-actions">
             <button class="btn btn-ghost" @click="showAddSong = false">Cancel</button>
@@ -146,11 +136,8 @@
           <h3>Import from Spotify</h3>
           <div class="form-group">
             <label>Spotify Track URL</label>
-            <input
-              v-model="spotifyTrackUrl"
-              placeholder="https://open.spotify.com/track/..."
-              @keyup.enter="handleSpotifyImport"
-            />
+            <input v-model="spotifyTrackUrl" placeholder="https://open.spotify.com/track/..."
+              @keyup.enter="handleSpotifyImport" />
           </div>
           <div class="modal-actions">
             <button class="btn btn-ghost" @click="showSpotifyImport = false">Cancel</button>
@@ -171,13 +158,9 @@
             Select a song's album art as the playlist cover
           </p>
           <div class="cover-grid" v-if="playlist.Songs.length">
-            <div
-              v-for="song in playlist.Songs"
-              :key="song.Id"
-              class="cover-option"
+            <div v-for="song in playlist.Songs" :key="song.Id" class="cover-option"
               :class="{ 'cover-active': playlist.PictureUrl && playlist.PictureUrl.includes(song.SpotifyId) }"
-              @click="selectCover(song.Id)"
-            >
+              @click="selectCover(song.Id)">
               <img :src="getSongAlbumArt(song)" :alt="song.Title" />
               <span class="cover-label">{{ song.Title }}</span>
             </div>
@@ -190,3 +173,4 @@
       </div>
     </Transition>
   </div>
+</div>

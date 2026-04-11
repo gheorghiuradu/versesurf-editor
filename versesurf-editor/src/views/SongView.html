@@ -4,9 +4,9 @@
     <div class="top-bar">
       <button class="btn btn-ghost" @click="goBack">← Back to Playlist</button>
       <div style="display: flex; gap: var(--space-sm)">
-        <button class="btn btn-secondary btn-sm" @click="showSpotifyModal = true">
+        <!-- <button class="btn btn-secondary btn-sm" @click="showSpotifyModal = true">
           📥 Spotify
-        </button>
+        </button> -->
         <button class="btn btn-primary btn-sm" @click="saveSong">💾 Save</button>
       </div>
     </div>
@@ -16,11 +16,7 @@
       <div class="editor-panel">
         <!-- Song identity -->
         <div class="song-identity">
-          <img
-            :src="editPictureUrl || getSongAlbumArt(song)"
-            :alt="editTitle || song.Title"
-            class="song-album-art"
-          />
+          <img :src="editPictureUrl || getSongAlbumArt(song)" :alt="editTitle || song.Title" class="song-album-art" />
           <div>
             <h2 class="song-title-display">{{ editTitle || 'Untitled' }}</h2>
             <p class="text-secondary">{{ editArtist || 'Unknown Artist' }}</p>
@@ -29,27 +25,21 @@
 
         <!-- Edit Form -->
         <div class="edit-form">
-          <div class="form-row">
+          <!-- <div class="form-row">
             <div class="form-group">
               <label>Title</label>
-              <input v-model="editTitle" placeholder="Song title" />
+              <input v-model="editTitle" placeholder="Song title" disabled />
             </div>
             <div class="form-group">
               <label>Artist</label>
-              <input v-model="editArtist" placeholder="Artist name" />
+              <input v-model="editArtist" placeholder="Artist name" disabled />
             </div>
-          </div>
+          </div> -->
 
           <div class="form-group">
-            <label>Preview URL</label>
-            <input v-model="editPreviewUrl" placeholder="Audio preview URL" />
-            <audio
-              id="full-audio-player"
-              v-if="editPreviewUrl"
-              :src="editPreviewUrl"
-              controls
-              class="w-full"
-            />
+            <label>Preview</label>
+            <input v-model="editPreviewUrl" placeholder="Audio preview URL" disabled hidden />
+            <audio id="full-audio-player" v-if="editPreviewUrl" :src="editPreviewUrl" controls class="w-full" />
           </div>
 
           <div class="form-group">
@@ -57,11 +47,7 @@
               Snippet
               <span class="label-hint">Use {curly braces} around the answer word(s)</span>
             </label>
-            <input
-              v-model="editSnippet"
-              placeholder="e.g. Never gonna {give} you up"
-              class="snippet-input"
-            />
+            <input v-model="editSnippet" placeholder="e.g. Never gonna {give} you up" class="snippet-input" />
           </div>
 
           <!-- Timing -->
@@ -81,11 +67,7 @@
               </div>
             </div>
             <div class="form-group timing-auto">
-              <button
-                class="btn btn-ghost btn-sm"
-                @click="autoSetEnd"
-                title="Set end to start + 5s"
-              >
+              <button class="btn btn-ghost btn-sm" @click="autoSetEnd" title="Set end to start + 5s">
                 ↻ Auto 5s
               </button>
             </div>
@@ -115,13 +97,8 @@
           <p class="text-secondary simulator-desc">Preview how this song will play in the game</p>
 
           <!-- Audio Player (hidden) -->
-          <AudioPlayer
-            ref="audioPlayer"
-            :src="editPreviewUrl"
-            :start-second="editStartSecond"
-            :end-second="editEndSecond"
-            @segment-end="onSegmentEnd"
-          />
+          <AudioPlayer ref="audioPlayer" :src="editPreviewUrl" :start-second="editStartSecond"
+            :end-second="editEndSecond" @segment-end="onSegmentEnd" />
 
           <!-- Simulator Display -->
           <div class="sim-stage">
@@ -129,18 +106,10 @@
             <div v-if="roundPhase === 'idle'" class="sim-idle">
               <div class="sim-vinyl">🎵</div>
               <p class="text-muted">Press play to simulate a round</p>
-              <button
-                class="btn btn-primary btn-lg"
-                @click="startRound"
-                :disabled="!editSnippet || !editPreviewUrl"
-              >
+              <button class="btn btn-primary btn-lg" @click="startRound" :disabled="!editSnippet || !editPreviewUrl">
                 ▶ Start Round
               </button>
-              <p
-                v-if="!editPreviewUrl"
-                class="text-muted"
-                style="font-size: 0.8rem; margin-top: 8px"
-              >
+              <p v-if="!editPreviewUrl" class="text-muted" style="font-size: 0.8rem; margin-top: 8px">
                 Add a preview URL to test audio
               </p>
             </div>
@@ -183,18 +152,11 @@
         <div class="panel">
           <!-- Tab header -->
           <div class="lyrics-tabs">
-            <button
-              class="lyrics-tab"
-              :class="{ active: lyricsTab === 'transcription' }"
-              @click="lyricsTab = 'transcription'"
-            >
+            <button class="lyrics-tab" :class="{ active: lyricsTab === 'transcription' }"
+              @click="lyricsTab = 'transcription'">
               🎤 Transcription
             </button>
-            <button
-              class="lyrics-tab"
-              :class="{ active: lyricsTab === 'synced' }"
-              @click="lyricsTab = 'synced'"
-            >
+            <button class="lyrics-tab" :class="{ active: lyricsTab === 'synced' }" @click="lyricsTab = 'synced'">
               🎵 Synced Lyrics
             </button>
           </div>
@@ -206,12 +168,8 @@
             </p>
 
             <div class="transcription-actions">
-              <button
-                v-if="!whisperModelReady"
-                class="btn btn-secondary btn-sm"
-                @click="loadModel"
-                :disabled="isModelLoading"
-              >
+              <button v-if="!whisperModelReady" class="btn btn-secondary btn-sm" @click="loadModel"
+                :disabled="isModelLoading">
                 {{ isModelLoading ? '⏳ Loading model...' : '📦 Load Whisper Model' }}
               </button>
               <span v-if="whisperModelReady" class="model-ready-badge">✅ Model Ready</span>
@@ -220,11 +178,8 @@
                   {{ lang.label }}
                 </option>
               </select>
-              <button
-                class="btn btn-primary btn-sm"
-                @click="runTranscription"
-                :disabled="isTranscribing || !editPreviewUrl"
-              >
+              <button class="btn btn-primary btn-sm" @click="runTranscription"
+                :disabled="isTranscribing || !editPreviewUrl">
                 {{ isTranscribing ? '⏳ Transcribing...' : '🎙️ Transcribe' }}
               </button>
             </div>
@@ -237,13 +192,9 @@
                 <strong>Full text:</strong> {{ transcriptionResult.text }}
               </div>
               <div class="word-timestamps">
-                <div
-                  v-for="(word, i) in transcriptionResult.words"
-                  :key="i"
-                  class="word-chip"
+                <div v-for="(word, i) in transcriptionResult.words" :key="i" class="word-chip"
                   @click="useWordAsSnippet(word)"
-                  :title="`Click to use as snippet (${formatTimestamp(word.start)} - ${formatTimestamp(word.end)})`"
-                >
+                  :title="`Click to use as snippet (${formatTimestamp(word.start)} - ${formatTimestamp(word.end)})`">
                   <span class="word-text">{{ word.word }}</span>
                   <span class="word-time">{{ formatTimestamp(word.start) }}</span>
                 </div>
@@ -261,21 +212,14 @@
             </p>
 
             <div class="transcription-actions">
-              <button
-                class="btn btn-primary btn-sm"
-                @click="fetchSyncedLyrics"
-                :disabled="isFetchingLyrics || !editArtist || !editTitle"
-              >
+              <button class="btn btn-primary btn-sm" @click="fetchSyncedLyrics"
+                :disabled="isFetchingLyrics || !editArtist || !editTitle">
                 {{ isFetchingLyrics ? '⏳ Fetching...' : '🔍 Fetch Lyrics' }}
               </button>
               <span v-if="lrclibResult && !lrclibResult.instrumental" class="model-ready-badge">
                 ✅ {{ lrclibLines.length }} lines
               </span>
-              <span
-                v-if="lrclibResult?.instrumental"
-                class="model-ready-badge"
-                style="color: var(--color-text-muted)"
-              >
+              <span v-if="lrclibResult?.instrumental" class="model-ready-badge" style="color: var(--color-text-muted)">
                 🎸 Instrumental
               </span>
             </div>
@@ -287,13 +231,8 @@
             <!-- Synced Lyrics Results -->
             <div v-if="lrclibLines.length" class="transcription-results">
               <div class="lrc-lines">
-                <div
-                  v-for="(line, i) in lrclibLines"
-                  :key="i"
-                  class="lrc-line"
-                  @click="useLrcLine(line)"
-                  :title="`Click to use as snippet (${formatTimestamp(line.time)})`"
-                >
+                <div v-for="(line, i) in lrclibLines" :key="i" class="lrc-line" @click="useLrcLine(line)"
+                  :title="`Click to use as snippet (${formatTimestamp(line.time)})`">
                   <span class="word-time lrc-line-time">{{ formatTimestamp(line.time) }}</span>
                   <span class="lrc-line-text">{{ line.text }}</span>
                 </div>
@@ -304,10 +243,8 @@
             </div>
 
             <!-- Plain lyrics fallback when no synced -->
-            <div
-              v-else-if="lrclibResult && !lrclibResult.instrumental && lrclibResult.plainLyrics"
-              class="transcription-results"
-            >
+            <div v-else-if="lrclibResult && !lrclibResult.instrumental && lrclibResult.plainLyrics"
+              class="transcription-results">
               <div class="transcription-full-text" style="white-space: pre-line">
                 {{ lrclibResult.plainLyrics }}
               </div>
@@ -335,16 +272,10 @@
         <div class="form-group">
           <label>Spotify Track URL</label>
           <div class="import-row">
-            <input
-              v-model="spotifyInputUrl"
-              placeholder="https://open.spotify.com/track/..."
-              @keyup.enter="importFromSpotify"
-            />
-            <button
-              class="btn btn-primary btn-sm"
-              @click="importFromSpotify"
-              :disabled="isImporting || !spotifyInputUrl.trim()"
-            >
+            <input v-model="spotifyInputUrl" placeholder="https://open.spotify.com/track/..."
+              @keyup.enter="importFromSpotify" />
+            <button class="btn btn-primary btn-sm" @click="importFromSpotify"
+              :disabled="isImporting || !spotifyInputUrl.trim()">
               {{ isImporting ? '⏳ Importing...' : '📥 Import' }}
             </button>
           </div>

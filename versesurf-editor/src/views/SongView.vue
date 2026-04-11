@@ -5,17 +5,25 @@ import { usePlaylistStore } from '@/stores/playlist'
 import SnippetDisplay from '@/components/SnippetDisplay.vue'
 import AudioPlayer from '@/components/AudioPlayer.vue'
 import genericAlbum from '@/assets/generic-album.png'
-import type { Song } from '@/types'
+import type { Song } from '@shared/song'
 
 import { fetchSpotifyTrack } from '@/utils/spotify'
-import { loadWhisperModel, transcribeAudio, isModelLoaded, WHISPER_LANGUAGES, type WordTimestamp, type TranscriptionResult } from '@/utils/whisper'
+import {
+  loadWhisperModel,
+  transcribeAudio,
+  isModelLoaded,
+  WHISPER_LANGUAGES,
+  type WordTimestamp,
+  type TranscriptionResult,
+} from '@/utils/whisper'
 import { fetchLrclibLyrics, parseLrc, type LrcLine, type LrclibResult } from '@/utils/lrclib'
 
 const route = useRoute()
 const router = useRouter()
 const store = usePlaylistStore()
 
-const songId = computed(() => route.params.id as string)
+const songId = computed(() => route.params.songId as string)
+const playlistId = computed(() => route.params.id as string)
 const song = computed(() => store.getSong(songId.value))
 const audioPlayer = ref<InstanceType<typeof AudioPlayer> | null>(null)
 
@@ -88,7 +96,7 @@ function getSongAlbumArt(s: Song): string {
 
 onMounted(() => {
   if (!store.hasPlaylist || !song.value) {
-    router.replace('/playlist')
+    router.replace(playlistId.value ? `/editor/${playlistId.value}` : '/')
     return
   }
   loadSongData()
@@ -160,7 +168,7 @@ function resetRound() {
 
 function goBack() {
   saveSong()
-  router.push('/playlist')
+  router.push(playlistId.value ? `/editor/${playlistId.value}` : '/editor')
 }
 
 async function importFromSpotify() {

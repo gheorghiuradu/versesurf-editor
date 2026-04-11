@@ -11,11 +11,3 @@ export interface Song {
   PictureUrl: string
   Enabled: boolean
 }
-
-export interface Playlist {
-  Id: string
-  Enabled: boolean
-  Name: string
-  PictureUrl: string
-  Songs: Song[]
-}

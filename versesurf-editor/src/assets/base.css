@@ -6,11 +6,11 @@
 /* ── CSS Custom Properties ──────────────────────── */
 :root {
   /* Brand palette */
-  --color-sand: #DEAF9F;
-  --color-terracotta: #C77F6A;
-  --color-wine: #8E4942;
-  --color-blush: #E5D5D3;
-  --color-peach: #D9957C;
+  --color-sand: #deaf9f;
+  --color-terracotta: #c77f6a;
+  --color-wine: #8e4942;
+  --color-blush: #e5d5d3;
+  --color-peach: #d9957c;
 
   /* Derived tones */
   --color-wine-deep: #6b342f;
@@ -124,19 +124,32 @@ img {
   display: block;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
   font-weight: 700;
   line-height: 1.2;
   color: var(--color-text);
 }
 
-h1 { font-size: 2.5rem; }
-h2 { font-size: 1.75rem; }
-h3 { font-size: 1.25rem; }
+h1 {
+  font-size: 2.5rem;
+}
+h2 {
+  font-size: 1.75rem;
+}
+h3 {
+  font-size: 1.25rem;
+}
 
 /* ── Form elements ──────────────────────────────── */
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: var(--font-body);
   font-size: 0.95rem;
   color: var(--color-text);
@@ -144,17 +157,22 @@ input, textarea, select {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-sm) var(--space-md);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   outline: none;
   width: 100%;
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   border-color: var(--color-border-focus);
   box-shadow: 0 0 0 3px rgba(199, 127, 106, 0.15);
 }
 
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--color-text-muted);
 }
 
@@ -179,12 +197,16 @@ input::placeholder, textarea::placeholder {
 .btn-primary {
   background: linear-gradient(135deg, var(--color-terracotta), var(--color-peach));
   color: #fff;
-  box-shadow: var(--shadow-sm), 0 0 16px rgba(199, 127, 106, 0.15);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 16px rgba(199, 127, 106, 0.15);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md), 0 0 24px rgba(199, 127, 106, 0.25);
+  box-shadow:
+    var(--shadow-md),
+    0 0 24px rgba(199, 127, 106, 0.25);
 }
 
 .btn-primary:active {
@@ -318,38 +340,76 @@ input::placeholder, textarea::placeholder {
   justify-content: space-between;
 }
 
-.gap-sm { gap: var(--space-sm); }
-.gap-md { gap: var(--space-md); }
-.gap-lg { gap: var(--space-lg); }
+.gap-sm {
+  gap: var(--space-sm);
+}
+.gap-md {
+  gap: var(--space-md);
+}
+.gap-lg {
+  gap: var(--space-lg);
+}
 
-.text-center { text-align: center; }
-.text-muted { color: var(--color-text-muted); }
-.text-secondary { color: var(--color-text-secondary); }
+.text-center {
+  text-align: center;
+}
+.text-muted {
+  color: var(--color-text-muted);
+}
+.text-secondary {
+  color: var(--color-text-secondary);
+}
 
 /* ── Animations ─────────────────────────────────── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .animate-fade-in {
@@ -361,12 +421,24 @@ input::placeholder, textarea::placeholder {
 }
 
 /* Staggered children */
-.stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 80ms; }
-.stagger > *:nth-child(3) { animation-delay: 160ms; }
-.stagger > *:nth-child(4) { animation-delay: 240ms; }
-.stagger > *:nth-child(5) { animation-delay: 320ms; }
-.stagger > *:nth-child(6) { animation-delay: 400ms; }
+.stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 80ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 160ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 240ms;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 320ms;
+}
+.stagger > *:nth-child(6) {
+  animation-delay: 400ms;
+}
 
 /* ── Scrollbar ──────────────────────────────────── */
 ::-webkit-scrollbar {

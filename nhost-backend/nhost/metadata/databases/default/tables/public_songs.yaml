@@ -1,0 +1,83 @@
+table:
+  name: songs
+  schema: public
+object_relationships:
+  - name: playlist
+    using:
+      foreign_key_constraint_on: playlist_id
+select_permissions:
+  - role: anonymous
+    permission:
+      columns:
+        - id
+        - spotify_id
+        - title
+        - artist
+        - snippet
+        - start_second
+        - end_second
+        - is_explicit
+        - preview_url
+        - picture_url
+        - enabled
+        - playlist_id
+      filter: {}
+      allow_aggregations: true
+  - role: me
+    permission:
+      columns:
+        - id
+        - spotify_id
+        - title
+        - artist
+        - snippet
+        - start_second
+        - end_second
+        - is_explicit
+        - preview_url
+        - picture_url
+        - enabled
+        - playlist_id
+      filter: {}
+      allow_aggregations: true
+  - role: public
+    permission:
+      columns:
+        - id
+        - spotify_id
+        - title
+        - artist
+        - snippet
+        - start_second
+        - end_second
+        - is_explicit
+        - preview_url
+        - picture_url
+        - enabled
+        - playlist_id
+      filter: {}
+      allow_aggregations: true
+  - role: user
+    permission:
+      columns:
+        - id
+        - spotify_id
+        - title
+        - artist
+        - snippet
+        - start_second
+        - end_second
+        - is_explicit
+        - preview_url
+        - picture_url
+        - enabled
+        - playlist_id
+      filter: {}
+      allow_aggregations: true
+delete_permissions:
+  - role: user
+    permission:
+      filter:
+        playlist:
+          created_by:
+            _eq: X-Hasura-User-Id

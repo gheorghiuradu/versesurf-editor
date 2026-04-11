@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
+    "@nhost/nhost-js": "^4.6.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.29",
     "vue-router": "^5.0.3"

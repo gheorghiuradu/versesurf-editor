@@ -1,4 +1,8 @@
-import { pipeline, type AutomaticSpeechRecognitionConfig, type AutomaticSpeechRecognitionOutput } from '@huggingface/transformers'
+import {
+  pipeline,
+  type AutomaticSpeechRecognitionConfig,
+  type AutomaticSpeechRecognitionOutput,
+} from '@huggingface/transformers'
 
 export interface WordTimestamp {
   word: string
@@ -18,8 +22,7 @@ export async function loadWhisperModel(
 ): Promise<void> {
   if (transcriber) return
 
-  transcriber = await (pipeline as any)('automatic-speech-recognition', 'Xenova/whisper-small',
-    {
+  transcriber = await (pipeline as any)('automatic-speech-recognition', 'Xenova/whisper-small', {
     // dtype: 'q8',
     // device: 'wasm',
     device: 'webgpu',
@@ -27,7 +30,10 @@ export async function loadWhisperModel(
   })
 }
 
-export async function transcribeAudio(audioUrl: string, language: string = 'en'): Promise<TranscriptionResult> {
+export async function transcribeAudio(
+  audioUrl: string,
+  language: string = 'en',
+): Promise<TranscriptionResult> {
   if (!transcriber) {
     throw new Error('Whisper model not loaded. Call loadWhisperModel() first.')
   }
@@ -37,7 +43,7 @@ export async function transcribeAudio(audioUrl: string, language: string = 'en')
     task: 'transcribe',
     // chunk_length_s: 30,
     // stride_length_s: 5,
-    language
+    language,
   }
 
   const result = (await transcriber(audioUrl, options)) as AutomaticSpeechRecognitionOutput

@@ -97,9 +97,12 @@ function stopTracking() {
   }
 }
 
-watch(() => props.src, () => {
-  stop()
-})
+watch(
+  () => props.src,
+  () => {
+    stop()
+  },
+)
 
 onBeforeUnmount(() => {
   stop()

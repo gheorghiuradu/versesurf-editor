@@ -1,97 +1,55 @@
-  <div class="home">
-    <!-- Hero Section -->
-    <section class="hero" :style="{ backgroundImage: `url(${heroImg})` }">
-      <div class="hero-overlay"></div>
-      <div class="hero-content">
-        <img :src="logo" alt="Verse Surf" class="hero-logo animate-fade-in" />
-        <h2 class="hero-title animate-slide-up">Playlist Editor</h2>
-        <p class="hero-subtitle animate-slide-up">
-          Create custom playlists for the game
-        </p>
-        <img :src="vinyl" alt="" class="hero-vinyl" />
-      </div>
-    </section>
+<div class="home">
+  <!-- Section 1: Game Presentation -->
+  <section class="hero" :style="{ backgroundImage: `url(${heroImg})` }">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <img :src="logo" alt="Verse Surf" class="hero-logo animate-fade-in" />
+      <h2 class="hero-title animate-slide-up">The Music Lyrics Party Game</h2>
+      <p class="hero-subtitle animate-slide-up">
+        Listen to a song clip, write fake lyrics that sounds convincing, and find the real one!
+      </p>
+      <img :src="vinyl" alt="" class="hero-vinyl" />
+    </div>
+  </section>
 
-    <!-- Action Cards -->
-    <section class="actions container">
-      <h2 class="section-title">Get Started</h2>
-      <div class="action-grid stagger">
-        <!-- Create New Playlist -->
-        <div class="card card-interactive action-card animate-slide-up" @click="showCreateForm = true">
-          <div class="action-icon">🎵</div>
-          <h3>Create New Playlist</h3>
-          <p class="text-secondary">Start from scratch with a fresh playlist</p>
-        </div>
+  <!-- Section 2: Call to Action -->
+  <section class="cta container">
+    <div class="cta-card">
+      <h2 class="cta-title">Create Your Own Playlists</h2>
+      <p class="cta-description">
+        Build custom playlists with song snippets and lyrics challenges.
+        Import from Spotify, fine-tune audio segments, and share your creations
+        with the community.
+      </p>
+      <template v-if="auth.isAuthenticated">
+        <router-link to="/my-playlists" class="btn btn-primary btn-lg">
+          Go to My Playlists
+        </router-link>
+      </template>
+      <template v-else>
+        <router-link to="/login" class="btn btn-primary btn-lg">
+          Sign In to Get Started
+        </router-link>
+      </template>
+    </div>
+  </section>
 
-        <!-- Import JSON -->
-        <div class="card card-interactive action-card animate-slide-up" @click="triggerImport">
-          <div class="action-icon">📂</div>
-          <h3>Import from JSON</h3>
-          <p class="text-secondary">Load an existing playlist file</p>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".json"
-            class="hidden-input"
-            @change="handleFileImport"
-          />
+  <!-- Section 3: Browse Playlists -->
+  <section class="browse container">
+    <h2 class="section-title">Browse Community Playlists</h2>
+    <div v-if="isLoadingPlaylists" class="browse-loading">Loading playlists…</div>
+    <div v-else-if="publicPlaylists.length === 0" class="browse-empty">No playlists available yet.</div>
+    <div v-else class="browse-grid">
+      <router-link v-for="playlist in publicPlaylists" :key="playlist.id" :to="`/playlist/${playlist.id}`"
+        class="browse-card card card-interactive">
+        <img :src="getPlaylistCover(playlist)" :alt="playlist.name" class="browse-card-cover" />
+        <div class="browse-card-info">
+          <h3 class="browse-card-title">{{ playlist.name }}</h3>
+          <p class="browse-card-meta">{{ playlist.songCount }} song{{ playlist.songCount === 1 ? '' : 's' }}</p>
+          <p class="browse-card-meta">By <img :src="playlist.creatorAvatar" alt="Creator Avatar"
+              class="creator-avatar" />{{ playlist.creatorName }}</p>
         </div>
-
-        <!-- Import Spotify -->
-        <div class="card card-interactive action-card animate-slide-up" @click="showSpotifyForm = true">
-          <div class="action-icon">🎧</div>
-          <h3>Import from Spotify</h3>
-          <p class="text-secondary">Import a public Spotify playlist</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Create Playlist Modal -->
-    <Transition name="modal">
-      <div v-if="showCreateForm" class="modal-overlay" @click.self="showCreateForm = false">
-        <div class="modal">
-          <h3>Create New Playlist</h3>
-          <div class="form-group">
-            <label>Playlist Name</label>
-            <input
-              v-model="playlistName"
-              type="text"
-              placeholder="e.g. All Out 90s"
-              @keyup.enter="createPlaylist"
-              autofocus
-            />
-          </div>
-          <div class="modal-actions">
-            <button class="btn btn-ghost" @click="showCreateForm = false">Cancel</button>
-            <button class="btn btn-primary" @click="createPlaylist" :disabled="!playlistName.trim()">
-              Create Playlist
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- Spotify Import Modal -->
-    <Transition name="modal">
-      <div v-if="showSpotifyForm" class="modal-overlay" @click.self="showSpotifyForm = false">
-        <div class="modal">
-          <h3>Import from Spotify</h3>
-          <div class="form-group">
-            <label>Spotify Playlist URL</label>
-            <input
-              v-model="spotifyUrl"
-              type="url"
-              placeholder="https://open.spotify.com/playlist/..."
-              @keyup.enter="handleSpotifyImport"
-            />
-          </div>
-          <div class="modal-actions">
-            <button class="btn btn-ghost" @click="showSpotifyForm = false">Cancel</button>
-            <button class="btn btn-primary" @click="handleSpotifyImport" :disabled="isImporting">
-              {{ isImporting ? '⏳ Importing...' : 'Import' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </div>
+      </router-link>
+    </div>
+  </section>
+</div>

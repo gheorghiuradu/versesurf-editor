@@ -1,0 +1,124 @@
+.detail-view {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-3xl);
+}
+
+.detail-loading,
+.detail-error {
+    text-align: center;
+    padding: var(--space-3xl) 0;
+}
+
+.detail-error h2 {
+    margin-bottom: var(--space-lg);
+}
+
+.detail-header {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-2xl);
+    padding-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.detail-cover {
+    width: 180px;
+    height: 180px;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    flex-shrink: 0;
+}
+
+.detail-info {
+    flex: 1;
+}
+
+.detail-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    margin-bottom: var(--space-sm);
+}
+
+.detail-songs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.detail-song-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    transition: background var(--transition-fast);
+}
+
+.detail-song-card:hover {
+    background: var(--color-bg-card-hover);
+}
+
+.song-index {
+    width: 28px;
+    text-align: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.song-art {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.song-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-artist {
+    font-size: 0.8rem;
+}
+
+.song-meta {
+    display: flex;
+    gap: var(--space-xs);
+    flex-shrink: 0;
+}
+
+.song-disabled {
+    opacity: 0.4;
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--space-3xl) 0;
+}
+
+@media (max-width: 600px) {
+    .detail-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .detail-cover {
+        width: 140px;
+        height: 140px;
+    }
+
+    .detail-title {
+        font-size: 1.4rem;
+    }
+}

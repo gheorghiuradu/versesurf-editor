@@ -1,0 +1,175 @@
+.my-playlists {
+    padding-top: var(--space-xl);
+    padding-bottom: var(--space-3xl);
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-xl);
+}
+
+.page-title {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+    text-align: center;
+    padding: var(--space-3xl) 0;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-md);
+}
+
+.error-state .btn {
+    margin-top: var(--space-md);
+}
+
+.text-danger {
+    color: var(--color-danger);
+}
+
+.playlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-lg);
+}
+
+.playlist-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.playlist-card-cover {
+    position: relative;
+    aspect-ratio: 1;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.playlist-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+}
+
+.playlist-card:hover .playlist-card-cover img {
+    transform: scale(1.05);
+}
+
+.playlist-status {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.playlist-card-body {
+    padding: var(--space-md);
+    cursor: pointer;
+    flex: 1;
+}
+
+.playlist-card-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.playlist-card-meta {
+    font-size: 0.85rem;
+}
+
+.playlist-card-actions {
+    display: flex;
+    gap: var(--space-sm);
+    padding: 0 var(--space-md) var(--space-md);
+}
+
+.btn-danger {
+    background: var(--color-danger);
+    color: #fff;
+    border: 1px solid var(--color-danger);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-weight: 600;
+    transition: background var(--transition-fast);
+}
+
+.btn-danger:hover {
+    background: #cc5555;
+}
+
+/* Modal styles (reuse from PlaylistView) */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+}
+
+.modal {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    width: 100%;
+    max-width: 440px;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal h3 {
+    margin-bottom: var(--space-md);
+}
+
+.modal .text-secondary {
+    margin-bottom: var(--space-lg);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+}
+
+.modal-enter-active,
+.modal-leave-active {
+    transition: opacity 0.25s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+    opacity: 0;
+}
+
+@media (max-width: 600px) {
+    .page-header {
+        flex-direction: column;
+        gap: var(--space-md);
+        align-items: stretch;
+    }
+
+    .playlist-grid {
+        grid-template-columns: 1fr;
+    }
+}

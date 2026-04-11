@@ -1,16 +1,27 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { usePlaylistStore } from '@/stores/playlist'
 import genericAlbum from '@/assets/generic-album.png'
+import SpotifyIcon from '@/components/SpotifyIcon.vue'
 
 const router = useRouter()
+const route = useRoute()
 const store = usePlaylistStore()
 
-// Redirect if no playlist loaded
-onMounted(() => {
-  console.log("PlaylistView onMounted, hasPlaylist:", store.hasPlaylist, "playlist.value:", store.playlist);
-  if (!store.hasPlaylist) {
+const isLoadingPlaylist = ref(false)
+
+// Load from backend if route has id, otherwise redirect if no local playlist
+onMounted(async () => {
+  const id = route.params.id as string | undefined
+  if (id) {
+    isLoadingPlaylist.value = true
+    const ok = await store.loadFromBackend(id)
+    isLoadingPlaylist.value = false
+    if (!ok) {
+      router.replace('/')
+    }
+  } else if (!store.hasPlaylist) {
     router.replace('/')
   }
 })
@@ -56,11 +67,11 @@ function addSong() {
   newSnippet.value = ''
   showAddSong.value = false
   // Navigate to edit
-  router.push(`/playlist/song/${song.Id}`)
+  router.push(`/editor/${playlist.value?.Id}/song/${song.Id}`)
 }
 
 function editSong(id: string) {
-  router.push(`/playlist/song/${id}`)
+  router.push(`/editor/${playlist.value?.Id}/song/${id}`)
 }
 
 function deleteSong(id: string) {
@@ -81,6 +92,11 @@ function exportPlaylist() {
   a.click()
   URL.revokeObjectURL(url)
   store.showToast('Playlist exported!', 'success')
+}
+
+function publishPlaylist(){
+  playlist.value!.Enabled = true
+  store.saveToBackend()
 }
 
 function selectCover(songId: string) {
