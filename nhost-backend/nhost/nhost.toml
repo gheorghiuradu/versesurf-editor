@@ -1,7 +1,7 @@
 [global]
 [[global.environment]]
 name = 'ALLOWED_ORIGINS'
-value = '{{ secrets.NHOST_ALLOWED_ORIGINS }}'
+value = '{{ secrets.ALLOWED_ORIGINS }}'
 
 [[global.environment]]
 name = 'SIGHTENGINE_API_USER'
